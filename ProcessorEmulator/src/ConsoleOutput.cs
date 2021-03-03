@@ -35,9 +35,9 @@ namespace ProcessorEmulator
 
             // Registers:
             int r_baseX = 40, r_baseY = 4;
-            AsciiRenderer.SetString(r_baseX,      r_baseY, "Registers:", gray);
-            AsciiRenderer.SetString(r_baseX + 1,      r_baseY + 2, "A --", light_gray);
-            AsciiRenderer.SetString(r_baseX + 7,  r_baseY + 2, "X --", light_gray);
+            AsciiRenderer.SetString(r_baseX, r_baseY, "Registers:", gray);
+            AsciiRenderer.SetString(r_baseX + 1, r_baseY + 2, "A --", light_gray);
+            AsciiRenderer.SetString(r_baseX + 7, r_baseY + 2, "X --", light_gray);
             AsciiRenderer.SetString(r_baseX + 13, r_baseY + 2, "Y --", light_gray);
 
             // Status Flags:
@@ -74,7 +74,7 @@ namespace ProcessorEmulator
         public static void UpdateMain(ushort programCounter, byte stackPointer, int cycles)
         {
             int baseX = 1, baseY = 4;
-            AsciiRenderer.SetString(baseX + 4, baseY + 2, BM.UShortToHex(programCounter), (programCounter == 0x0000 ? dark_gray : white));
+            AsciiRenderer.SetString(baseX + 4, baseY + 2, BM.UShortToHex(programCounter), (programCounter == 0xFFFC ? blue : white));
             AsciiRenderer.SetString(baseX + 13, baseY + 2, BM.ByteToHex(stackPointer), (stackPointer == 0x00 ? dark_gray : white));
             AsciiRenderer.SetString(baseX + 20, baseY + 2, cycles.ToString(), (cycles == 0 ? dark_gray : red));
         }

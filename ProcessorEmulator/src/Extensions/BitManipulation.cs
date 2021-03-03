@@ -67,5 +67,14 @@ namespace ProcessorEmulator.Extensions
             }
             return hex.ToString().ToUpper();
         }
+
+        /// <summary>
+        /// Combine a high and low byte (litte endian)
+        /// </summary>
+        /// <returns></returns>
+        public static ushort CombineBytes(byte high, byte low)
+        {
+            return (ushort)(((high) & 0xFF) << 8 | (low) & 0xFF);
+        }
     }
 }

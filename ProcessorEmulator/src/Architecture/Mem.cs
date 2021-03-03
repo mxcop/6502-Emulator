@@ -46,6 +46,22 @@ namespace ProcessorEmulator
             return data;
         }
 
+        /// <summary> Fetch the word the program counter is pointing to. </summary>
+        public Word FetchWord(ref s32 cycles, ref CPU cpu)
+        {
+            // Fetch high and low byte from memory.
+            Byte highByte = Data[cpu.PC];
+            Byte lowByte = Data[cpu.PC + 1];
+            // Combine high and low byte into a word.
+            Word word = (Word)(((highByte) & 0xFF) << 8 | (lowByte) & 0xFF);
+            // Increment the program counter.
+            cpu.PC+=2;
+            // Decrement the cycles.
+            cycles-=2;
+            // Return the byte.
+            return word;
+        }
+
         /// <summary> Read a byte from the given byte address. </summary>
         public Byte ReadByte(ref s32 cycles, Byte address)
         {
@@ -71,7 +87,15 @@ namespace ProcessorEmulator
         /// <summary> Read a word from the given byte address. </summary>
         public Word ReadWord(ref s32 cycles, Byte address)
         {
-            return 0;
+            // Read low and high byte (little endian)
+            Byte highByte = Data[address];
+            Byte lowByte = Data[address + 1];
+            // Decrement the cycles.
+            cycles-=2;
+            // Combine the low and high byte into a word.
+            Word word = (Word)(((highByte) & 0xFF) << 8 | (lowByte) & 0xFF);
+            // Return the word.
+            return word;
         }
 
         // Simple operator overload.

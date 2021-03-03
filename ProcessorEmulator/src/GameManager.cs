@@ -1,5 +1,4 @@
-﻿using Ascii.Rendering;
-using Ascii.Types;
+﻿using Ascii.Types;
 using ProcessorEmulator.Extensions;
 
 namespace ProcessorEmulator
@@ -24,10 +23,11 @@ namespace ProcessorEmulator
             cpu.Reset(ref mem);
 
             // Start - Little inline program.
-            mem[0xFFFC] = CPU.INS_LDA_ZPX;
+            mem[0xFFFC] = INS.LDA_AB;
             mem[0xFFFD] = 0x80;
-            cpu.X = 0x0F;
-            mem[0x008F] = 0x64;
+            mem[0xFFFE] = 0x0F;
+            ushort address = BM.CombineBytes(0x80, 0x0F);
+            mem[address] = 0x64;
             // End - Little inline program.
 
             cycles = cpu.Execute(4, ref mem);

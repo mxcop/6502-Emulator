@@ -4,7 +4,6 @@
 using Byte = System.Byte;
 using Word = System.UInt16;
 using s32 = System.Int32;
-using u32 = System.UInt32;
 
 namespace ProcessorEmulator
 {
@@ -51,6 +50,7 @@ namespace ProcessorEmulator
             memory.Initialize();
         }
 
+        /// Modification methods:
         private Word AddBytes(ref s32 cycles, Byte a, Byte b)
         {
             // Decrement the cycles.
@@ -58,13 +58,6 @@ namespace ProcessorEmulator
             // Return result as word.
             return (Word)(a + b);
         }
-
-        /// Opcodes:
-        public const Byte
-            INS_LDA_IN = 0xA9,
-            INS_LDA_ZP = 0xA5,
-            INS_LDA_ZPX = 0xB5,
-            INS_LDA_AB = 0xAD;
 
         /// Generalized methods:
         private void SetLDAStatus()
@@ -89,34 +82,40 @@ namespace ProcessorEmulator
 
                 switch (instr)
                 {
-                    case INS_LDA_IN:
+                    /// Loads a byte of memory into the accumulator setting the zero and negative flags as appropriate.
+                    #region Load Accumulator
+
+                    case INS.LDA_IN:
                         val = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
                         A = val; // Load val into A register.
 
                         SetLDAStatus();
                         break;
 
-                    case INS_LDA_ZP:
+                    case INS.LDA_ZP:
                         zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
-                        A = memory.ReadByte(ref cycles, zp_address); // Read byte from zero page.
+                        A = memory.ReadByte(ref cycles, zp_address); // Load the byte at the address into the a register.
 
                         SetLDAStatus();
                         break;
 
-                    case INS_LDA_ZPX:
+                    case INS.LDA_ZPX:
                         zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
                         address = AddBytes(ref cycles, X, zp_address); // Add the zero page address to the x register.
 
-                        A = memory.ReadByte(ref cycles, address); // Read byte from the address.
+                        A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
 
                         SetLDAStatus();
                         break;
 
-                    case INS_LDA_AB:
-
+                    case INS.LDA_AB:
+                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                        A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
 
                         SetLDAStatus();
                         break;
+
+                    #endregion Load Accumulator
 
                     default:
                         System.Console.WriteLine("Instruction not handled %d", instr);
