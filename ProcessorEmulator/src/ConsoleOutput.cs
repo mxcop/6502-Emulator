@@ -149,7 +149,7 @@ namespace ProcessorEmulator
             {
                 for (int x = 0; x < 32; x++)
                 {
-                    int n = y * 16 + x;
+                    int n = y * 32 + x;
                     byte b = memory.Get(currentPage * 256 + n);
                     AsciiRenderer.SetString(sc_baseX + 1 + 2 * x, sc_baseY + 2 + y, BM.ByteToHex(b),
                         b == 0x00 ? very_dark_gray : white, pc == n ? blue : black);

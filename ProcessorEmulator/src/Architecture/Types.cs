@@ -11,7 +11,12 @@ namespace ProcessorEmulator
     {
         /// Opcodes:
         public const Byte
-            // LDA
+            // JMP - Jump
+            JMP_AB = 0x4C,
+            JMP_IN = 0x6C,
+            // JSR - Jump to Subroutine
+            JSR_AB = 0x20,
+            // LDA - Load Accumelator
             LDA_IM = 0xA9,
             LDA_ZP = 0xA5,
             LDA_ZPX = 0xB5,
@@ -20,7 +25,7 @@ namespace ProcessorEmulator
             LDA_ABY = 0xB9,
             LDA_INX = 0xA1,
             LDA_INY = 0xB1,
-            // JSR
-            JSR_AB = 0x20;
+            // RTS - Return from Subroutine
+            RTS_IP = 0x60;
     }
 }

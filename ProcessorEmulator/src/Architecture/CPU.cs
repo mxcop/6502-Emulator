@@ -23,8 +23,8 @@ namespace ProcessorEmulator
         bool I { get => BM.GetBit(PS, 2); set => BM.SetBit(ref PS, 2, value); } /* Interrupt Disable */
         bool D { get => BM.GetBit(PS, 3); set => BM.SetBit(ref PS, 3, value); } /* Decimal Mode */
         bool B { get => BM.GetBit(PS, 4); set => BM.SetBit(ref PS, 4, value); } /* Break Command */
-        bool V { get => BM.GetBit(PS, 5); set => BM.SetBit(ref PS, 5, value); } /* Overflow Flag */
-        bool N { get => BM.GetBit(PS, 6); set => BM.SetBit(ref PS, 6, value); } /* Negative Flag */
+        bool V { get => BM.GetBit(PS, 5); set => BM.SetBit(ref PS, 6, value); } /* Overflow Flag */
+        bool N { get => BM.GetBit(PS, 6); set => BM.SetBit(ref PS, 7, value); } /* Negative Flag */
         #endregion
 
         // Debug Requests //
@@ -87,15 +87,11 @@ namespace ProcessorEmulator
             N = (A & 0b10000000) > 0; // Set negative flag.
         }
 
-        private void PushPCToStack(ref s32 cycles, ref Mem memory)
-        {
-            memory.WriteWord(ref cycles, (Word)(256 + SP), (Word)(PC - 1));
-            SP+=2;
-        }
-
         /// <summary> Execute a number of cycles. </summary>
         public s32 Execute(s32 cycles, ref Mem memory)
         {
+            s32 notHandled = 0;
+
             while (cycles > 0)
             {
                 // Fetch an intruction.
@@ -109,6 +105,49 @@ namespace ProcessorEmulator
 
                 switch (instr)
                 {
+                    /// The JSR instruction pushes the address (minus one) of the return point on to the stack and then sets the program counter to the target memory address.
+                    #region Jump
+
+                    case INS.JMP_AB:
+                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+
+                        PC = address; // Set the PC to the instructions address.
+
+                        break;
+
+                    case INS.JMP_IN:
+                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+
+                        address = memory.ReadWord(ref cycles, address); // Read the address at the instructions address.
+                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+
+                        PC = address; // Set the PC to the instructions address.
+
+                        break;
+
+                    #endregion
+
+                    /// The JSR instruction pushes the address (minus one) of the return point on to the stack and then sets the program counter to the target memory address.
+                    #region Jump to Subroutine
+
+                    case INS.JSR_AB:
+                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+
+                        PC--; // Decrement the PC by one.
+                        cycles--;
+
+                        memory.WriteWord(ref cycles, (Word)(256 + SP), PC); // Push the PC (minus one) to the stack.
+
+                        SP += 2; // Increment the stack point by 2.
+                        PC = address; // Set the PC to the instructions address.
+
+                        break;
+
+                    #endregion
+
                     /// Loads a byte of memory into the accumulator setting the zero and negative flags as appropriate.
                     #region Load Accumulator
 
@@ -157,16 +196,17 @@ namespace ProcessorEmulator
 
                     #endregion Load Accumulator
 
-                    /// Loads a byte of memory into the accumulator setting the zero and negative flags as appropriate.
-                    #region Jump to Subroutine
+                    /// The RTS instruction is used at the end of a subroutine to return to the calling routine. It pulls the program counter (minus one) from the stack.
+                    #region Return from Subroutine
 
-                    case INS.JSR_AB:
-                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
-                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+                    case INS.RTS_IP:
+                        SP -= 2; // Decrement the stack pointer to prepare to read a word.
+                        cycles--;
 
-                        PushPCToStack(ref cycles, ref memory); // Push the PC to the stack.
+                        address = memory.FetchStackWord(ref cycles, SP, ref this); // Fetch the return address from the stack.
 
-                        PC = address; // Set the PC to the instructions address.
+                        PC = address; // Set the program counter to the return address.
+                        PC++; // Increment the program counter.
                         cycles--;
 
                         break;
@@ -174,12 +214,13 @@ namespace ProcessorEmulator
                     #endregion
 
                     default:
+                        notHandled++;
                         System.Console.WriteLine("Instruction not handled %d", instr);
                         break;
                 }
             }
 
-            return cycles;
+            return cycles + notHandled;
         }
     }
 }

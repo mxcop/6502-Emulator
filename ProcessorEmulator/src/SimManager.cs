@@ -35,10 +35,11 @@ namespace ProcessorEmulator
 
             mem[address] = INS.LDA_IM; // Load A Immediate [2]
             mem[address + 1] = 0x42;
+            mem[address + 2] = INS.RTS_IP;// Return from Subroutine [6]
 
             /// End - Little inline program.
 
-            cycles = cpu.Execute(8, ref mem);
+            cycles = cpu.Execute(6 + 2 + 6, ref mem);
 
             // Request debug information.
             registers = cpu.Registers();
@@ -76,13 +77,19 @@ namespace ProcessorEmulator
 
         public void KeyPressed(AsciiInput input)
         {
-            if (input.Key == "=" && page < 255)
+            if (input.Key == "=")
             {
-                page++;
+                if (page < 255)
+                    page++;
+                else
+                    page = 0;
             }
-            if (input.Key == "-" && page > 0)
+            if (input.Key == "-")
             {
-                page--;
+                if (page > 0)
+                    page--;
+                else
+                    page = 255;
             }
         }
     }
