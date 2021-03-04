@@ -26,20 +26,38 @@ namespace ProcessorEmulator
             cpu = new CPU();
             cpu.Reset(ref mem);
 
+            #region JSR LDA RTS
             /// Start - Little inline program.
 
-            mem[0xFFFC] = INS.JSR_AB; // Jump to Subroutine [6]
-            mem[0xFFFD] = 0x03;
-            mem[0xFFFE] = 0x02;
+            //mem[0xFFFC] = INS.JSR_AB; // Jump to Subroutine [6]
+            //mem[0xFFFD] = 0x03;
+            //mem[0xFFFE] = 0x02;
+            //ushort address = BM.CombineBytes(0x02, 0x03); // flip bytes for address
+
+            //mem[address] = INS.LDA_IM; // Load A Immediate [2]
+            //mem[address + 1] = 0x42;
+            //mem[address + 2] = INS.RTS_IP;// Return from Subroutine [6]
+
+            /// End - Little inline program.
+            #endregion
+
+            /// Start - Little inline program.
+
+            mem[0xFFFC] = INS.JMP_IN; // Jump Indirect [5]
+            mem[0xFFFD] = 0x00;
+            mem[0xFFFE] = 0x03;
+            ushort indirect_address = BM.CombineBytes(0x03, 0x00); // flip bytes for address
+
+            mem[indirect_address] = 0x03;
+            mem[indirect_address + 1] = 0x02;
             ushort address = BM.CombineBytes(0x02, 0x03); // flip bytes for address
 
             mem[address] = INS.LDA_IM; // Load A Immediate [2]
             mem[address + 1] = 0x42;
-            mem[address + 2] = INS.RTS_IP;// Return from Subroutine [6]
 
             /// End - Little inline program.
 
-            cycles = cpu.Execute(6 + 2 + 6, ref mem);
+            cycles = cpu.Execute(5 + 2, ref mem);
 
             // Request debug information.
             registers = cpu.Registers();
