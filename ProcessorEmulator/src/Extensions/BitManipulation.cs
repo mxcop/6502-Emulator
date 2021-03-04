@@ -76,5 +76,7 @@ namespace ProcessorEmulator.Extensions
         {
             return (ushort)(((high) & 0xFF) << 8 | (low) & 0xFF);
         }
+
+        
     }
 }

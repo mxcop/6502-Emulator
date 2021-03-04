@@ -7,6 +7,7 @@ namespace ProcessorEmulator
     public static class ConsoleOutput
     {
         private static readonly AsciiColor black = AsciiColor.FromRGB(24, 20, 37);
+        private static readonly AsciiColor very_dark_gray = AsciiColor.FromRGB(30, 28, 51);
         private static readonly AsciiColor dark_gray = AsciiColor.FromRGB(38, 43, 68);
         private static readonly AsciiColor gray = AsciiColor.FromRGB(58, 68, 102);
         private static readonly AsciiColor light_gray = AsciiColor.FromRGB(90, 105, 136);
@@ -59,13 +60,12 @@ namespace ProcessorEmulator
 
             int zp_baseX = 1, zp_baseY = 16;
             AsciiRenderer.SetString(zp_baseX, zp_baseY, "Zero Page ($0000-$00FF):", gray);
-            for (int y = 0; y < 8; y++)
-            {
-                for (int x = 0; x < 16; x++)
-                {
-                    AsciiRenderer.SetString(zp_baseX + 1 + 3 * x, zp_baseY + 2 + 2 * y, "--", light_gray);
-                }
-            }
+
+            int st_baseX = 40, st_baseY = 16;
+            AsciiRenderer.SetString(st_baseX, st_baseY, "Stack Page ($0100-$01FF):", gray);
+
+            int sc_baseX = 1, sc_baseY = 36;
+            AsciiRenderer.SetString(sc_baseX, sc_baseY, "Second Page ($0200-$02FF):", gray);
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace ProcessorEmulator
         /// <summary>
         /// Update the memory in the console.
         /// </summary>
-        public static void UpdateMemory(Mem memory)
+        public static void UpdateMemory(ushort programCounter, byte stackPointer, int currentPage, Mem memory)
         {
             int baseX = 1, baseY = 16;
 
@@ -117,7 +117,42 @@ namespace ProcessorEmulator
                 for (int x = 0; x < 16; x++)
                 {
                     byte b = memory.Get(y * 16 + x);
-                    AsciiRenderer.SetString(baseX + 1 + 3 * x, baseY + 2 + 2 * y, BM.ByteToHex(b), b == 0x00 ? dark_gray : white);
+                    AsciiRenderer.SetString(baseX + 1 + 2 * x, baseY + 2 + y, BM.ByteToHex(b),
+                        b == 0x00 ? very_dark_gray : white);
+                }
+            }
+
+            int s_baseX = 40, s_baseY = 16;
+
+            // Stack page:
+            for (int y = 0; y < 16; y++)
+            {
+                for (int x = 0; x < 16; x++)
+                {
+                    int n = y * 16 + x;
+                    byte b = memory.Get(256 + n);
+                    AsciiRenderer.SetString(s_baseX + 1 + 2 * x, s_baseY + 2 + y, BM.ByteToHex(b),
+                        b == 0x00 ? very_dark_gray : white, n == stackPointer ? blue : black);
+                }
+            }
+
+            int sc_baseX = 1, sc_baseY = 36;
+            int pc = -1;
+
+            if (programCounter >= currentPage * 256 && programCounter < currentPage * 256 + 256)
+                pc = programCounter - currentPage * 256;
+
+            AsciiRenderer.SetString(sc_baseX, sc_baseY, $"{PageNumberToName(currentPage)} (${BM.UShortToHex((ushort)(currentPage * 256))}-${BM.UShortToHex((ushort)(currentPage * 256 + 255))}):       ", gray);
+
+            // Current page:
+            for (int y = 0; y < 8; y++)
+            {
+                for (int x = 0; x < 32; x++)
+                {
+                    int n = y * 16 + x;
+                    byte b = memory.Get(currentPage * 256 + n);
+                    AsciiRenderer.SetString(sc_baseX + 1 + 2 * x, sc_baseY + 2 + y, BM.ByteToHex(b),
+                        b == 0x00 ? very_dark_gray : white, pc == n ? blue : black);
                 }
             }
 
@@ -129,6 +164,16 @@ namespace ProcessorEmulator
                 byte b = memory.Get((int)Mem.MAX_MEM - 6 + x);
                 AsciiRenderer.SetString(pa_baseX + 1 + 3 * x, pa_baseY + 2, BM.ByteToHex(b), b == 0x00 ? dark_gray : white);
             }
+        }
+
+        private static string PageNumberToName(int page)
+        {
+            return page switch
+            {
+                0 => "Zero Page",
+                1 => "Stack Page",
+                _ => "Page " + page.ToString(),
+            };
         }
     }
 }

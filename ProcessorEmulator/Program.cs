@@ -11,7 +11,7 @@ namespace ProcessorEmulator
             AsciiRenderer.Initialize(80, 50, "Processor");
 
             // Ascii engine events :
-            GameManager gameManager = new GameManager();
+            SimManager gameManager = new SimManager();
             AsciiEngine.OnStart += gameManager.Start;
             AsciiEngine.OnUpdate += gameManager.Update;
             AsciiEngine.OnKeyPressed += gameManager.KeyPressed;

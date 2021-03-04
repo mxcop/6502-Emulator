@@ -3,7 +3,7 @@ using ProcessorEmulator.Extensions;
 
 namespace ProcessorEmulator
 {
-    public class GameManager
+    public class SimManager
     {
         private Mem mem;
         private CPU cpu;
@@ -14,23 +14,31 @@ namespace ProcessorEmulator
         private ushort programCounter;
         private bool[] statusFlags;
         private int cycles;
+        private int page;
 
         public void Start()
         {
+            // Debug second page.
+            page = 2;
+
             // Create and reset cpu.
             mem = new Mem();
             cpu = new CPU();
             cpu.Reset(ref mem);
 
-            // Start - Little inline program.
-            mem[0xFFFC] = INS.LDA_AB;
-            mem[0xFFFD] = 0x80;
-            mem[0xFFFE] = 0x0F;
-            ushort address = BM.CombineBytes(0x80, 0x0F);
-            mem[address] = 0x64;
-            // End - Little inline program.
+            /// Start - Little inline program.
 
-            cycles = cpu.Execute(4, ref mem);
+            mem[0xFFFC] = INS.JSR_AB; // Jump to Subroutine [6]
+            mem[0xFFFD] = 0x03;
+            mem[0xFFFE] = 0x02;
+            ushort address = BM.CombineBytes(0x02, 0x03); // flip bytes for address
+
+            mem[address] = INS.LDA_IM; // Load A Immediate [2]
+            mem[address + 1] = 0x42;
+
+            /// End - Little inline program.
+
+            cycles = cpu.Execute(8, ref mem);
 
             // Request debug information.
             registers = cpu.Registers();
@@ -63,12 +71,19 @@ namespace ProcessorEmulator
             ConsoleOutput.UpdateStatusFlags(statusFlags);
 
             // Update memory:
-            ConsoleOutput.UpdateMemory(mem);
+            ConsoleOutput.UpdateMemory(programCounter, stackPointer, page, mem);
         }
 
         public void KeyPressed(AsciiInput input)
         {
-
+            if (input.Key == "=" && page < 255)
+            {
+                page++;
+            }
+            if (input.Key == "-" && page > 0)
+            {
+                page--;
+            }
         }
     }
 }

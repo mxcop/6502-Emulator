@@ -35,6 +35,14 @@ namespace ProcessorEmulator
         public bool[] StatusFlags() => new bool[] { C, Z, I, D, B, V, N };
         #endregion
 
+        /// <notes MOS6502>
+        /// The 6502 microprocessor is a relatively simple 8 bit CPU 
+        /// with only a few internal registers capable of addressing at most 64Kb 
+        /// of memory via its 16 bit address bus.
+        /// !! The processor is little endian 
+        /// !! and expects addresses to be stored in memory least significant byte first.
+        /// </notes>
+
         /// <summary> Reset the program counter. </summary>
         public void Reset(ref Mem memory)
         {
@@ -59,11 +67,30 @@ namespace ProcessorEmulator
             return (Word)(a + b);
         }
 
+        private Word AddBytes(ref s32 cycles, Word a, Byte b)
+        {
+            // Decrement the cycles.
+            cycles--;
+            // Return result as word.
+            return (Word)(a + b);
+        }
+
+        private Word SwapBytes(Word x)
+        {
+            return (Word)((x >> 8) | (x << 8));
+        }
+
         /// Generalized methods:
         private void SetLDAStatus()
         {
             Z = (A == 0); // Set zero flag.
             N = (A & 0b10000000) > 0; // Set negative flag.
+        }
+
+        private void PushPCToStack(ref s32 cycles, ref Mem memory)
+        {
+            memory.WriteWord(ref cycles, (Word)(256 + SP), (Word)(PC - 1));
+            SP+=2;
         }
 
         /// <summary> Execute a number of cycles. </summary>
@@ -85,7 +112,7 @@ namespace ProcessorEmulator
                     /// Loads a byte of memory into the accumulator setting the zero and negative flags as appropriate.
                     #region Load Accumulator
 
-                    case INS.LDA_IN:
+                    case INS.LDA_IM:
                         val = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
                         A = val; // Load val into A register.
 
@@ -110,12 +137,41 @@ namespace ProcessorEmulator
 
                     case INS.LDA_AB:
                         address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+
+                        A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
+
+                        SetLDAStatus();
+                        break;
+
+                    case INS.LDA_ABX: /// NOT WORKING ! USED 1 TOO MANY CYCLES !
+                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+
+                        address = AddBytes(ref cycles, address, X); // Add the X register to the address.
+
                         A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
 
                         SetLDAStatus();
                         break;
 
                     #endregion Load Accumulator
+
+                    /// Loads a byte of memory into the accumulator setting the zero and negative flags as appropriate.
+                    #region Jump to Subroutine
+
+                    case INS.JSR_AB:
+                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+
+                        PushPCToStack(ref cycles, ref memory); // Push the PC to the stack.
+
+                        PC = address; // Set the PC to the instructions address.
+                        cycles--;
+
+                        break;
+
+                    #endregion
 
                     default:
                         System.Console.WriteLine("Instruction not handled %d", instr);

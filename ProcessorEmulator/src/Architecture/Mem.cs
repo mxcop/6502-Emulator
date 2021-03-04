@@ -33,6 +33,21 @@ namespace ProcessorEmulator
             }
         }
 
+        /// <summary> Write a byte into memory. </summary>
+        public void WriteByte(ref s32 cycles, Word address, Byte val)
+        {
+            Data[address] = val;
+            cycles--;
+        }
+
+        /// <summary> Write a word into memory. </summary>
+        public void WriteWord(ref s32 cycles, Word address, Word val)
+        {
+            Data[address] = (Byte)(val >> 8);
+            Data[address + 1] = (Byte)val;
+            cycles -= 2;
+        }
+
         /// <summary> Fetch the byte the program counter is pointing to. </summary>
         public Byte FetchByte(ref s32 cycles, ref CPU cpu)
         {
@@ -99,7 +114,7 @@ namespace ProcessorEmulator
         }
 
         // Simple operator overload.
-        public Byte this[Word key]
+        public Byte this[int key]
         {
             get => Data[key];
             set => Data[key] = value;
