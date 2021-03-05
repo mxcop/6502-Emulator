@@ -33,6 +33,12 @@ namespace ProcessorEmulator
             }
         }
 
+        /// <summary> Swap the bytes in a word. </summary>
+        private Word SwapBytes(Word x)
+        {
+            return (Word)((x >> 8) | (x << 8));
+        }
+
         /// <summary> Write a byte into memory. (1 cycle) </summary>
         public void WriteByte(ref s32 cycles, Word address, Byte val)
         {
@@ -73,6 +79,8 @@ namespace ProcessorEmulator
             cpu.PC+=2;
             // Decrement the cycles.
             cycles-=2;
+            // Flip the word since its an address.
+            word = SwapBytes(word);
             // Return the byte.
             return word;
         }
@@ -124,6 +132,8 @@ namespace ProcessorEmulator
             cycles-=2;
             // Combine the low and high byte into a word.
             Word word = (Word)(((highByte) & 0xFF) << 8 | (lowByte) & 0xFF);
+            // Flip the word since its an address.
+            word = SwapBytes(word);
             // Return the word.
             return word;
         }
@@ -138,6 +148,8 @@ namespace ProcessorEmulator
             cycles -= 2;
             // Combine the low and high byte into a word.
             Word word = (Word)(((highByte) & 0xFF) << 8 | (lowByte) & 0xFF);
+            // Flip the word since its an address.
+            word = SwapBytes(word);
             // Return the word.
             return word;
         }

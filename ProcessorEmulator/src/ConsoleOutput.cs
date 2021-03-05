@@ -76,7 +76,7 @@ namespace ProcessorEmulator
             int baseX = 1, baseY = 4;
             AsciiRenderer.SetString(baseX + 4, baseY + 2, BM.UShortToHex(programCounter), (programCounter == 0xFFFC ? blue : white));
             AsciiRenderer.SetString(baseX + 13, baseY + 2, BM.ByteToHex(stackPointer), (stackPointer == 0x00 ? dark_gray : white));
-            AsciiRenderer.SetString(baseX + 20, baseY + 2, cycles.ToString(), (cycles == 0 ? dark_gray : red));
+            AsciiRenderer.SetString(baseX + 20, baseY + 2, cycles.ToString() + "   ", (cycles == 0 ? dark_gray : red));
         }
 
         /// <summary>

@@ -41,23 +41,38 @@ namespace ProcessorEmulator
             /// End - Little inline program.
             #endregion
 
+            #region JMP_IN LDA
             /// Start - Little inline program.
 
-            mem[0xFFFC] = INS.JMP_IN; // Jump Indirect [5]
-            mem[0xFFFD] = 0x00;
-            mem[0xFFFE] = 0x03;
-            ushort indirect_address = BM.CombineBytes(0x03, 0x00); // flip bytes for address
+            //mem[0xFFFC] = INS.JMP_IN; // Jump Indirect [5]
+            //mem[0xFFFD] = 0x00;
+            //mem[0xFFFE] = 0x03;
+            //ushort indirect_address = BM.CombineBytes(0x03, 0x00); // flip bytes for address
 
-            mem[indirect_address] = 0x03;
-            mem[indirect_address + 1] = 0x02;
-            ushort address = BM.CombineBytes(0x02, 0x03); // flip bytes for address
+            //mem[indirect_address] = 0x03;
+            //mem[indirect_address + 1] = 0x02;
+            //ushort address = BM.CombineBytes(0x02, 0x03); // flip bytes for address
 
-            mem[address] = INS.LDA_IM; // Load A Immediate [2]
-            mem[address + 1] = 0x42;
+            //mem[address] = INS.LDA_IM; // Load A Immediate [2]
+            //mem[address + 1] = 0x42;
+
+            /// End - Little inline program.
+            #endregion
+
+            /// Start - Little inline program.
+
+            mem[0xFFFC] = INS.LDA_INY; // Load Acc indirect Y [5*]
+            mem[0xFFFD] = 0x03;
+
+            mem[0x03] = 0x03;
+            mem[0x04] = 0x02;
+            cpu.Y = 0xFF;
+
+            mem[0x0302] = 0x48;
 
             /// End - Little inline program.
 
-            cycles = cpu.Execute(5 + 2, ref mem);
+            //cycles = cpu.ExecuteCycles(5 + 2, ref mem);
 
             // Request debug information.
             registers = cpu.Registers();
@@ -95,19 +110,31 @@ namespace ProcessorEmulator
 
         public void KeyPressed(AsciiInput input)
         {
-            if (input.Key == "=")
+            if (input.Key == "=") // Increment page
             {
                 if (page < 255)
                     page++;
                 else
                     page = 0;
             }
-            if (input.Key == "-")
+
+            if (input.Key == "-") // Decrement page
             {
                 if (page > 0)
                     page--;
                 else
                     page = 255;
+            }
+
+            if (input.Key == "Space") // Execute next instruction
+            {
+                cycles += cpu.Execute(ref mem);
+            }
+
+            if (input.Key == "r") // Reset the cpu
+            {
+                cpu.Reset();
+                cycles = 0;
             }
         }
     }

@@ -43,7 +43,7 @@ namespace ProcessorEmulator
         /// !! and expects addresses to be stored in memory least significant byte first.
         /// </notes>
 
-        /// <summary> Reset the program counter. </summary>
+        /// <summary> Reset the cpu and memory. </summary>
         public void Reset(ref Mem memory)
         {
             // Reset Vector Address //
@@ -58,6 +58,19 @@ namespace ProcessorEmulator
             memory.Initialize();
         }
 
+        /// <summary> Reset the cpu. </summary>
+        public void Reset()
+        {
+            // Reset Vector Address //
+            PC = 0xFFFC;
+            // Reset Stack Pointer //
+            SP = 0x00;
+            // Reset Processor Status //
+            C = Z = I = D = B = V = N = false;
+            // Reset Registers //
+            A = X = Y = 0;
+        }
+
         /// Modification methods:
         private Word AddBytes(ref s32 cycles, Byte a, Byte b)
         {
@@ -67,17 +80,38 @@ namespace ProcessorEmulator
             return (Word)(a + b);
         }
 
+        /// <summary>
+        /// Adds a byte to a word considering page crossing taking one extra cycle.
+        /// </summary>
         private Word AddBytes(ref s32 cycles, Word a, Byte b)
         {
-            // Decrement the cycles.
-            cycles--;
+            // Reference the high byte.
+            Byte h = (Byte)(a >> 8);
+            // Add the byte to the word.
+            Word w = (Word)(a + b);
+
+            // Check if page boundary was crossed.
+            if (h != (Byte)(w >> 8))
+                cycles--; // Use extra cycle.
+
             // Return result as word.
-            return (Word)(a + b);
+            return w;
         }
 
-        private Word SwapBytes(Word x)
+        /// <summary>
+        /// Adds a byte to a word without considering page crossings.
+        /// The byte will be added to the low byte and wrapped if overflown.
+        /// </summary>
+        private Word AddBytes(Word a, Byte b)
         {
-            return (Word)((x >> 8) | (x << 8));
+            // Get the low byte.
+            Byte l = (Byte)a;
+            // Add the byte to the low byte.
+            l += b;
+            // Combine the high and low byte again.
+            Word w = BM.CombineBytes((Byte)(a >> 8), l);
+            // Return result as word.
+            return w;
         }
 
         /// Generalized methods:
@@ -88,139 +122,305 @@ namespace ProcessorEmulator
         }
 
         /// <summary> Execute a number of cycles. </summary>
-        public s32 Execute(s32 cycles, ref Mem memory)
+        public s32 ExecuteCycles(s32 cycles, ref Mem memory)
         {
-            s32 notHandled = 0;
+            //s32 notHandled = 0;
 
             while (cycles > 0)
             {
-                // Fetch an intruction.
-                Byte instr = memory.FetchByte(ref cycles, ref this);
-                // Value.
-                Byte val;
-                // Zero page address.
-                Byte zp_address;
-                // Address.
-                Word address;
+                cycles -= Execute(ref memory);
 
-                switch (instr)
-                {
-                    /// The JSR instruction pushes the address (minus one) of the return point on to the stack and then sets the program counter to the target memory address.
-                    #region Jump
+                #region OLD
+                //// Fetch an intruction.
+                //Byte instr = memory.FetchByte(ref cycles, ref this);
+                //// Value.
+                //Byte val;
+                //// Zero page address.
+                //Byte zp_address;
+                //// Address.
+                //Word address;
 
-                    case INS.JMP_AB:
-                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
-                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+                //switch (instr)
+                //{
+                //    /// The JSR instruction pushes the address (minus one) of the return point on to the stack and then sets the program counter to the target memory address.
+                //    #region Jump
 
-                        PC = address; // Set the PC to the instructions address.
+                //    case INS.JMP_AB:
+                //        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                //        address = SwapBytes(address); // Swap bytes to least significant byte first.
 
-                        break;
+                //        PC = address; // Set the PC to the instructions address.
 
-                    case INS.JMP_IN:
-                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
-                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+                //        break;
 
-                        address = memory.ReadWord(ref cycles, address); // Read the address at the instructions address.
-                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+                //    case INS.JMP_IN:
+                //        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                //        address = SwapBytes(address); // Swap bytes to least significant byte first.
 
-                        PC = address; // Set the PC to the instructions address.
+                //        address = memory.ReadWord(ref cycles, address); // Read the address at the instructions address.
+                //        address = SwapBytes(address); // Swap bytes to least significant byte first.
 
-                        break;
+                //        PC = address; // Set the PC to the instructions address.
 
-                    #endregion
+                //        break;
 
-                    /// The JSR instruction pushes the address (minus one) of the return point on to the stack and then sets the program counter to the target memory address.
-                    #region Jump to Subroutine
+                //    #endregion
 
-                    case INS.JSR_AB:
-                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
-                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+                //    /// The JSR instruction pushes the address (minus one) of the return point on to the stack and then sets the program counter to the target memory address.
+                //    #region Jump to Subroutine
 
-                        PC--; // Decrement the PC by one.
-                        cycles--;
+                //    case INS.JSR_AB:
+                //        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                //        address = SwapBytes(address); // Swap bytes to least significant byte first.
 
-                        memory.WriteWord(ref cycles, (Word)(256 + SP), PC); // Push the PC (minus one) to the stack.
+                //        PC--; // Decrement the PC by one.
+                //        cycles--;
 
-                        SP += 2; // Increment the stack point by 2.
-                        PC = address; // Set the PC to the instructions address.
+                //        memory.WriteWord(ref cycles, (Word)(256 + SP), PC); // Push the PC (minus one) to the stack.
 
-                        break;
+                //        SP += 2; // Increment the stack point by 2.
+                //        PC = address; // Set the PC to the instructions address.
 
-                    #endregion
+                //        break;
 
-                    /// Loads a byte of memory into the accumulator setting the zero and negative flags as appropriate.
-                    #region Load Accumulator
+                //    #endregion
 
-                    case INS.LDA_IM:
-                        val = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
-                        A = val; // Load val into A register.
+                //    /// Loads a byte of memory into the accumulator setting the zero and negative flags as appropriate.
+                //    #region Load Accumulator
 
-                        SetLDAStatus();
-                        break;
+                //    case INS.LDA_IM:
+                //        val = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+                //        A = val; // Load val into A register.
 
-                    case INS.LDA_ZP:
-                        zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
-                        A = memory.ReadByte(ref cycles, zp_address); // Load the byte at the address into the a register.
+                //        SetLDAStatus();
+                //        break;
 
-                        SetLDAStatus();
-                        break;
+                //    case INS.LDA_ZP:
+                //        zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+                //        A = memory.ReadByte(ref cycles, zp_address); // Load the byte at the address into the a register.
 
-                    case INS.LDA_ZPX:
-                        zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
-                        address = AddBytes(ref cycles, X, zp_address); // Add the zero page address to the x register.
+                //        SetLDAStatus();
+                //        break;
 
-                        A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
+                //    case INS.LDA_ZPX:
+                //        zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+                //        address = AddBytes(ref cycles, X, zp_address); // Add the zero page address to the x register.
 
-                        SetLDAStatus();
-                        break;
+                //        A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
 
-                    case INS.LDA_AB:
-                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
-                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+                //        SetLDAStatus();
+                //        break;
 
-                        A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
+                //    case INS.LDA_AB:
+                //        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                //        address = SwapBytes(address); // Swap bytes to least significant byte first.
 
-                        SetLDAStatus();
-                        break;
+                //        A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
 
-                    case INS.LDA_ABX: /// NOT WORKING ! USED 1 TOO MANY CYCLES !
-                        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
-                        address = SwapBytes(address); // Swap bytes to least significant byte first.
+                //        SetLDAStatus();
+                //        break;
 
-                        address = AddBytes(ref cycles, address, X); // Add the X register to the address.
+                //    case INS.LDA_ABX: /// NOT WORKING ! USED 1 TOO MANY CYCLES !
+                //        address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+                //        address = SwapBytes(address); // Swap bytes to least significant byte first.
 
-                        A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
+                //        address = AddBytes(ref cycles, address, X); // Add the X register to the address.
 
-                        SetLDAStatus();
-                        break;
+                //        A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
 
-                    #endregion Load Accumulator
+                //        SetLDAStatus();
+                //        break;
 
-                    /// The RTS instruction is used at the end of a subroutine to return to the calling routine. It pulls the program counter (minus one) from the stack.
-                    #region Return from Subroutine
+                //    #endregion Load Accumulator
 
-                    case INS.RTS_IP:
-                        SP -= 2; // Decrement the stack pointer to prepare to read a word.
-                        cycles--;
+                //    /// The RTS instruction is used at the end of a subroutine to return to the calling routine. It pulls the program counter (minus one) from the stack.
+                //    #region Return from Subroutine
 
-                        address = memory.FetchStackWord(ref cycles, SP, ref this); // Fetch the return address from the stack.
+                //    case INS.RTS_IP:
+                //        SP -= 2; // Decrement the stack pointer to prepare to read a word.
+                //        cycles--;
 
-                        PC = address; // Set the program counter to the return address.
-                        PC++; // Increment the program counter.
-                        cycles--;
+                //        address = memory.FetchStackWord(ref cycles, SP, ref this); // Fetch the return address from the stack.
 
-                        break;
+                //        PC = address; // Set the program counter to the return address.
+                //        PC++; // Increment the program counter.
+                //        cycles--;
 
-                    #endregion
+                //        break;
 
-                    default:
-                        notHandled++;
-                        System.Console.WriteLine("Instruction not handled %d", instr);
-                        break;
-                }
+                //    #endregion
+
+                //    default:
+                //        notHandled++;
+                //        System.Console.WriteLine("Instruction not handled %d", instr);
+                //        break;
+                //}
+                #endregion
             }
 
-            return cycles + notHandled;
+            return cycles /*+ notHandled*/;
+        }
+
+        /// <summary> Execute the next instruction. </summary>
+        /// <returns> The amount of cycles used. </returns>
+        public s32 Execute(ref Mem memory)
+        {
+            // Create cycles variable for debugging.
+            s32 cycles = 0;
+
+            // Fetch an intruction.
+            Byte instr = memory.FetchByte(ref cycles, ref this);
+            // Value.
+            Byte val;
+            // Zero page address.
+            Byte zp_address;
+            // Address.
+            Word address;
+
+            switch (instr)
+            {
+                /// The JSR instruction pushes the address (minus one) of the return point on to the stack and then sets the program counter to the target memory address.
+                #region Jump
+
+                case INS.JMP_AB:
+                    address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+
+                    PC = address; // Set the PC to the instructions address.
+
+                    break;
+
+                case INS.JMP_IN:
+                    address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+
+                    address = memory.ReadWord(ref cycles, address); // Read the address at the instructions address.
+
+                    PC = address; // Set the PC to the instructions address.
+
+                    break;
+
+                #endregion
+
+                /// The JSR instruction pushes the address (minus one) of the return point on to the stack and then sets the program counter to the target memory address.
+                #region Jump to Subroutine
+
+                case INS.JSR_AB:
+                    address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+
+                    PC--; // Decrement the PC by one.
+                    cycles--;
+
+                    memory.WriteWord(ref cycles, (Word)(256 + SP), PC); // Push the PC (minus one) to the stack.
+
+                    SP += 2; // Increment the stack point by 2.
+                    PC = address; // Set the PC to the instructions address.
+
+                    break;
+
+                #endregion
+
+                /// Loads a byte of memory into the accumulator setting the zero and negative flags as appropriate.
+                #region Load Accumulator
+
+                case INS.LDA_IM:
+                    val = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+                    A = val; // Load val into A register.
+
+                    SetLDAStatus();
+                    break;
+
+                case INS.LDA_ZP:
+                    zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+                    A = memory.ReadByte(ref cycles, zp_address); // Load the byte at the address into the a register.
+
+                    SetLDAStatus();
+                    break;
+
+                case INS.LDA_ZPX:
+                    zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+                    address = AddBytes(ref cycles, X, zp_address); // Add the zero page address to the x register.
+
+                    A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
+
+                    SetLDAStatus();
+                    break;
+
+                case INS.LDA_AB:
+                    address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+
+                    A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
+
+                    SetLDAStatus();
+                    break;
+
+                case INS.LDA_ABX:
+                    address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+
+                    address = AddBytes(ref cycles, address, X); // Add the X register to the address.
+
+                    A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
+
+                    SetLDAStatus();
+                    break;
+
+                case INS.LDA_ABY:
+                    address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+
+                    address = AddBytes(ref cycles, address, Y); // Add the Y register to the address.
+
+                    A = memory.ReadByte(ref cycles, address); // Load the byte at the address into the a register.
+
+                    SetLDAStatus();
+                    break;
+
+                case INS.LDA_INX:
+                    zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+
+                    val = (Byte)AddBytes(ref cycles, zp_address, X); // Add the X register to the zero page address.
+
+                    address = memory.ReadWord(ref cycles, val); // Load the target address from the zero page.
+
+                    A = memory.ReadByte(ref cycles, address); // Load the byte at target address into the a register.
+
+                    SetLDAStatus();
+                    break;
+
+                case INS.LDA_INY:
+                    zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+
+                    address = memory.ReadWord(ref cycles, zp_address); // Load the 16bit address from zero page.
+
+                    address = AddBytes(ref cycles, address, Y); // Add the Y register to the address from the zero page.
+
+                    A = memory.ReadByte(ref cycles, address); // Load the byte at target address into the a register.
+
+                    SetLDAStatus();
+                    break;
+
+                #endregion Load Accumulator
+
+                /// The RTS instruction is used at the end of a subroutine to return to the calling routine. It pulls the program counter (minus one) from the stack.
+                #region Return from Subroutine
+
+                case INS.RTS_IP:
+                    SP -= 2; // Decrement the stack pointer to prepare to read a word.
+                    cycles--;
+
+                    address = memory.FetchStackWord(ref cycles, SP, ref this); // Fetch the return address from the stack.
+
+                    PC = address; // Set the program counter to the return address.
+                    PC++; // Increment the program counter.
+                    cycles--;
+
+                    break;
+
+                #endregion
+
+                default:
+                    System.Console.WriteLine("Instruction not handled %d", instr);
+                    return 1;
+            }
+
+            return 0 - cycles;
         }
     }
 }
