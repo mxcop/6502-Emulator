@@ -29,14 +29,14 @@ namespace ProcessorEmulator
             #region JSR LDA RTS
             /// Start - Little inline program.
 
-            //mem[0xFFFC] = INS.JSR_AB; // Jump to Subroutine [6]
-            //mem[0xFFFD] = 0x03;
-            //mem[0xFFFE] = 0x02;
-            //ushort address = BM.CombineBytes(0x02, 0x03); // flip bytes for address
+            mem[0xFFFC] = INS.JSR_AB; // Jump to Subroutine [6]
+            mem[0xFFFD] = 0x03;
+            mem[0xFFFE] = 0x02;
+            ushort address = BM.CombineBytes(0x02, 0x03); // flip bytes for address
 
-            //mem[address] = INS.LDA_IM; // Load A Immediate [2]
-            //mem[address + 1] = 0x42;
-            //mem[address + 2] = INS.RTS_IP;// Return from Subroutine [6]
+            mem[address] = INS.LDA_IM; // Load A Immediate [2]
+            mem[address + 1] = 0x42;
+            mem[address + 2] = INS.RTS_IP;// Return from Subroutine [6]
 
             /// End - Little inline program.
             #endregion
@@ -61,14 +61,15 @@ namespace ProcessorEmulator
 
             /// Start - Little inline program.
 
-            mem[0xFFFC] = INS.LDA_INY; // Load Acc indirect Y [5*]
-            mem[0xFFFD] = 0x03;
+            //mem[0xFFFC] = INS.JMP_AB; // Jump to 0x0200 (big endian)
+            //mem[0xFFFD] = 0x00;
+            //mem[0xFFFE] = 0x02;
 
-            mem[0x03] = 0x03;
-            mem[0x04] = 0x02;
-            cpu.Y = 0xFF;
+            //mem[0x0200] = INS.LDA_IM; // Load Immediate 0x34
+            //mem[0x0201] = 0x34;
 
-            mem[0x0302] = 0x48;
+            //mem[0x0202] = INS.STA_ZP; // Store to zero page 0x05
+            //mem[0x0203] = 0x05;
 
             /// End - Little inline program.
 

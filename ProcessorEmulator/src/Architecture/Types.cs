@@ -25,6 +25,14 @@ namespace ProcessorEmulator
             LDA_ABY = 0xB9,
             LDA_INX = 0xA1,
             LDA_INY = 0xB1,
+            // STA - Store Accumulator
+            STA_ZP = 0x85,
+            STA_ZPX = 0x95,
+            STA_AB = 0x8D,
+            STA_ABX = 0x9D,
+            STA_ABY = 0x99,
+            STA_INX = 0x81,
+            STA_INY = 0x91,
             // RTS - Return from Subroutine
             RTS_IP = 0x60;
     }

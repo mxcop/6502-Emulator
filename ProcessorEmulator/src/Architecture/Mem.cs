@@ -39,6 +39,13 @@ namespace ProcessorEmulator
             return (Word)((x >> 8) | (x << 8));
         }
 
+        /// <summary> Write a byte into the zero page. (1 cycle) </summary>
+        public void WriteByteZeroPage(ref s32 cycles, Byte address, Byte val)
+        {
+            Data[address] = val;
+            cycles--;
+        }
+
         /// <summary> Write a byte into memory. (1 cycle) </summary>
         public void WriteByte(ref s32 cycles, Word address, Byte val)
         {

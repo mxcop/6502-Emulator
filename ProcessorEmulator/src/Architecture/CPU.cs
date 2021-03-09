@@ -72,6 +72,11 @@ namespace ProcessorEmulator
         }
 
         /// Modification methods:
+
+        /// <summary>
+        /// Adds two bytes (1 cycle).
+        /// </summary>
+        /// <returns> The result as a word. </returns>
         private Word AddBytes(ref s32 cycles, Byte a, Byte b)
         {
             // Decrement the cycles.
@@ -112,6 +117,17 @@ namespace ProcessorEmulator
             Word w = BM.CombineBytes((Byte)(a >> 8), l);
             // Return result as word.
             return w;
+        }
+
+        /// <summary>
+        /// Adds two bytes into a word (1 cycle)
+        /// </summary>
+        private Word AddByteToAddress(ref s32 cycles, Word a, Byte b)
+        {
+            // Use one cycle.
+            cycles--;
+            // Return the result as word.
+            return (Word)(a + b);
         }
 
         /// Generalized methods:
@@ -396,7 +412,75 @@ namespace ProcessorEmulator
                     SetLDAStatus();
                     break;
 
-                #endregion Load Accumulator
+                #endregion
+
+                /// Stores the contents of the accumulator into memory.
+                #region Store Accumulator
+
+                case INS.STA_ZP:
+                    zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+
+                    memory.WriteByteZeroPage(ref cycles, zp_address, A); // Write A register into the zero page address.
+                    
+                    break;
+
+                case INS.STA_ZPX:
+                    zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+
+                    address = AddBytes(ref cycles, zp_address, X); // Add the X register to the zero page address.
+
+                    memory.WriteByte(ref cycles, address, A); // Write A register into the target address.
+
+                    break;
+
+                case INS.STA_AB:
+                    address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+
+                    memory.WriteByte(ref cycles, address, A); // Write A register into the target address.
+
+                    break;
+
+                case INS.STA_ABX:
+                    address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+
+                    address = AddByteToAddress(ref cycles, address, X); ; // Add the X register to the address.
+
+                    memory.WriteByte(ref cycles, address, A); // Write A register into the target address.
+
+                    break;
+
+                case INS.STA_ABY:
+                    address = memory.FetchWord(ref cycles, ref this); // Fetch the next word.
+
+                    address = AddByteToAddress(ref cycles, address, Y); // Add the Y register to the address.
+
+                    memory.WriteByte(ref cycles, address, A); // Write A register into the target address.
+
+                    break;
+
+                case INS.STA_INX:
+                    zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+
+                    val = (Byte)AddBytes(ref cycles, zp_address, X); // Add the X register to the zero page address.
+
+                    address = memory.ReadWord(ref cycles, val); // Load the target address from the zero page.
+
+                    memory.WriteByte(ref cycles, address, A); // Load the byte at target address into the a register.
+
+                    break;
+
+                case INS.STA_INY:
+                    zp_address = memory.FetchByte(ref cycles, ref this); // Fetch the next byte.
+
+                    address = memory.ReadWord(ref cycles, zp_address); // Load the 16bit address from zero page.
+
+                    address = AddByteToAddress(ref cycles, address, Y); // Add the Y register to the address from the zero page.
+
+                    memory.WriteByte(ref cycles, address, A); // Load the byte at target address into the a register.
+
+                    break;
+
+                #endregion
 
                 /// The RTS instruction is used at the end of a subroutine to return to the calling routine. It pulls the program counter (minus one) from the stack.
                 #region Return from Subroutine
@@ -416,7 +500,7 @@ namespace ProcessorEmulator
                 #endregion
 
                 default:
-                    System.Console.WriteLine("Instruction not handled %d", instr);
+                    System.Console.WriteLine($"Instruction not handled {instr}");
                     return 1;
             }
 
